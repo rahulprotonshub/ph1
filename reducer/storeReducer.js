@@ -1,6 +1,3 @@
-
-
-
 import {createStore} from 'redux';
 import rootReducer from './combineReducer';
 import {persistStore, persistReducer} from 'redux-persist';
@@ -15,4 +12,3 @@ const persistConfig = {
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 export const store = createStore(persistedReducer);
 export const persistedStore = persistStore(store);
-
