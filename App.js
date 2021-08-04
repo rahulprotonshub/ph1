@@ -13,8 +13,14 @@ import {
 } from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+// Redux
+import {PersistGate} from 'redux-persist/integration/react';
+import {useDispatch, useSelector, Provider} from 'react-redux';
+import {setReduxList} from './reducer/reducer_action';
+import {persistedStore, store} from './reducer/storeReducer';
 
 const Stack = createNativeStackNavigator();
+
 const App = () => {
   const [showSplash, setSplash] = useState(true);
 
@@ -25,27 +31,31 @@ const App = () => {
   }, []);
 
   return (
-    <SafeAreaView style={[styles.backgroundStyle]}>
-      <StatusBar barStyle={'light-content'} backgroundColor={'#434343'} />
-      {showSplash ? (
-        <Splash />
-      ) : (
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName="UserList">
-            <Stack.Screen
-              name="UserList"
-              component={UserList}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="UserDetails"
-              component={UserDetails}
-              options={{headerShown: false}}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      )}
-    </SafeAreaView>
+    <Provider store={store}>
+      <PersistGate persistor={persistedStore} loading={null}>
+        <SafeAreaView style={[styles.backgroundStyle]}>
+          <StatusBar barStyle={'light-content'} backgroundColor={'#434343'} />
+          {showSplash ? (
+            <Splash />
+          ) : (
+            <NavigationContainer>
+              <Stack.Navigator initialRouteName="UserList">
+                <Stack.Screen
+                  name="UserList"
+                  component={UserList}
+                  options={{headerShown: false}}
+                />
+                <Stack.Screen
+                  name="UserDetails"
+                  component={UserDetails}
+                  options={{headerShown: false}}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+          )}
+        </SafeAreaView>
+      </PersistGate>
+    </Provider>
   );
 };
 
@@ -61,16 +71,22 @@ const Splash = () => {
 };
 
 function UserList({navigation}) {
-  const [loader, setLoader] = useState(true);
+  const [loader, setLoader] = useState(false);
   const [data, setData] = useState([]);
   const [list, setList] = useState([]);
   const [keyword, setKeyword] = useState('');
 
+  const dispatch = useDispatch();
+  const dataReducer = useSelector(state => state.dataReducer);
+
   useEffect(() => {
-    fetchApi();
+    if (dataReducer == 'undefined' || dataReducer.list.length == 0) {
+      fetchApi();
+    }
   }, []);
 
   function fetchApi() {
+    setLoader(true);
     fetch('https://jsonplaceholder.typicode.com/posts')
       .then(response => response.json())
       .then(json => {
@@ -78,10 +94,12 @@ function UserList({navigation}) {
         if (json.length) {
           setData(json);
           setList(json);
+          dispatch(setReduxList(json));
         } else {
           alert('No data found');
           setData([]);
           setList([]);
+          dispatch(setReduxList([]));
         }
       });
   }
@@ -146,7 +164,7 @@ function UserList({navigation}) {
         <LoaderIndicator />
       ) : (
         <FlatList
-          data={list}
+          data={dataReducer.list}
           contentContainerStyle={{padding: '3%'}}
           style={[{flex: 1}]}
           renderItem={({item}) => flatListItem(item)}
